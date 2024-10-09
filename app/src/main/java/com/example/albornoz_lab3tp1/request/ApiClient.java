@@ -1,62 +1,53 @@
 package com.example.albornoz_lab3tp1.request;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.widget.Toast;
 
 import com.example.albornoz_lab3tp1.modelo.Usuario;
 
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+
 public class ApiClient {
 
-    private static SharedPreferences sp;
+    private static final String FILE_NAME = "usuario.dat";
 
-    private static SharedPreferences conectar(Context context){
-        if(sp == null){
-            sp = context.getSharedPreferences("datos",0);
+    public static void guardar(Context context, Usuario usuario) {
+        // Al abrir el file stream en la cláusula del try, el flush se llama implícitamente al terminar el bloque
+        // Aprendido del "using" en C#
+        try (FileOutputStream fos = context.openFileOutput(FILE_NAME, Context.MODE_PRIVATE);
+             ObjectOutputStream oos = new ObjectOutputStream(fos)) {
+            oos.writeObject(usuario);
+            //Toast.makeText(context.getApplicationContext(), "Usuario guardado", Toast.LENGTH_SHORT).show();
+        } catch (IOException e) {
+            e.printStackTrace();
+            Toast.makeText(context.getApplicationContext(), "Error al guardar el usuario", Toast.LENGTH_LONG).show();
         }
-        return sp;
     }
 
-    public static void guardar(Context context, Usuario usuario){
-        SharedPreferences sp = conectar(context);
-
-        SharedPreferences.Editor editor = sp.edit();
-        editor.putLong("dni", usuario.getDni());
-        editor.putString("apellido", usuario.getApellido());
-        editor.putString("nombre", usuario.getNombre());
-        editor.putString("mail", usuario.getMail());
-        editor.putString("pass", usuario.getPassword());
-        editor.commit();
-    }
-    public static Usuario leer(Context context){
-        SharedPreferences sp = conectar(context);
-
-        Long dni = sp.getLong("dni",-1);
-        String apellido = sp.getString("apellido","-1");
-        String nombre = sp.getString("nombre","-1");
-        String mail = sp.getString("mail","-1");
-        String pass = sp.getString("pass","-1");
-
-        Usuario usuario = new Usuario(dni, nombre, apellido, mail, pass);
-        return usuario;
-    }
-
-    public static Usuario login(Context context, String mail, String pass){
+    public static Usuario leer(Context context) {
         Usuario usuario = null;
-        SharedPreferences sp = conectar(context);
-
-        Long dni = sp.getLong("dni",-1);
-        String apellido = sp.getString("apellido","-1");
-        String nombre = sp.getString("nombre","-1");
-        String email = sp.getString("mail","-1");
-        String passw = sp.getString("pass","-1");
-
-        if(mail.equals(email) && pass.equals(passw)){
-            usuario = new Usuario(dni, nombre, apellido, email, passw);
-        } else {
-            Toast.makeText(context.getApplicationContext(), "Datos Invalidos", Toast.LENGTH_LONG).show();
+        try (FileInputStream fis = context.openFileInput(FILE_NAME);
+             ObjectInputStream ois = new ObjectInputStream(fis)) {
+            usuario = (Usuario) ois.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+            //Toast.makeText(context.getApplicationContext(), "Error al leer el usuario", Toast.LENGTH_LONG).show();
         }
         return usuario;
     }
 
+    public static Usuario login(Context context, String mail, String pass) {
+        Usuario usuario = leer(context);
+
+        if (usuario != null && mail.equals(usuario.getMail()) && pass.equals(usuario.getPassword())) {
+            return usuario;
+        } else {
+            //Toast.makeText(context.getApplicationContext(), "Datos Invalidos", Toast.LENGTH_LONG).show();
+            return null;
+        }
+    }
 }
